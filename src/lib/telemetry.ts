@@ -45,19 +45,19 @@ const templates: Omit<Alert, "id" | "time">[] = [
 const now = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 export const initialAlerts: Alert[] = [
-  { id: 1, ...templates[0], time: "08:42" },
-  { id: 2, ...templates[1], time: "08:15" },
-  { id: 3, ...templates[3], time: "07:58" },
-  { id: 4, ...templates[2], time: "06:31" },
-  { id: 5, ...templates[5], time: "05:10" },
-  { id: 6, ...templates[4], time: "04:47" },
+  { id: 1, ...templates[0]!, time: "08:42" },
+  { id: 2, ...templates[1]!, time: "08:15" },
+  { id: 3, ...templates[3]!, time: "07:58" },
+  { id: 4, ...templates[2]!, time: "06:31" },
+  { id: 5, ...templates[5]!, time: "05:10" },
+  { id: 6, ...templates[4]!, time: "04:47" },
 ];
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState(initialAlerts);
   useEffect(() => {
     const id = setInterval(() => {
-      const t = templates[Math.floor(Math.random() * templates.length)];
+      const t = templates[Math.floor(Math.random() * templates.length)]!;
       setAlerts((a) => [{ id: Date.now(), ...t, time: now() }, ...a].slice(0, 30));
     }, 9000);
     return () => clearInterval(id);
