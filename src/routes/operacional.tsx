@@ -8,9 +8,9 @@ import { useAlerts, type Severity } from "@/lib/telemetry";
 export const Route = createFileRoute("/operacional")({
   head: () => ({
     meta: [
-      { title: "Controle operacional e alertas â€” DeSol" },
-      { name: "description", content: "Feed de alertas por severidade e sincronizaÃ§Ã£o local via Bluetooth ou LoRa." },
-      { property: "og:title", content: "Controle operacional e alertas â€” DeSol" },
+      { title: "Controle operacional e alertas — DeSol" },
+      { name: "description", content: "Feed de alertas por severidade e sincronização local via Bluetooth ou LoRa." },
+      { property: "og:title", content: "Controle operacional e alertas — DeSol" },
       { property: "og:description", content: "Alertas e controle da rede DeSol." },
     ],
   }),
@@ -20,8 +20,8 @@ export const Route = createFileRoute("/operacional")({
 const filters: { key: "all" | Severity; label: string }[] = [
   { key: "all", label: "Todos" },
   { key: "good", label: "OK" },
-  { key: "warn", label: "AtenÃ§Ã£o" },
-  { key: "critical", label: "CrÃ­tico" },
+  { key: "warn", label: "Atenção" },
+  { key: "critical", label: "Crítico" },
 ];
 
 const sev = {
@@ -47,12 +47,12 @@ function Ops() {
         body: JSON.stringify({ deviceId: "ESP32-DESOL-01", readings }),
       });
       const result = (await response.json()) as { accepted?: number; rejected?: number; error?: string };
-      if (!response.ok) throw new Error(result.error ?? "Falha na sincronizaÃ§Ã£o");
-      toast.success("SincronizaÃ§Ã£o com o gateway concluÃ­da", {
-        description: `${result.accepted ?? 0} leitura(s) aceitas Â· ${result.rejected ?? 0} rejeitada(s)`,
+      if (!response.ok) throw new Error(result.error ?? "Falha na sincronização");
+      toast.success("Sincronização com o gateway concluída", {
+        description: `${result.accepted ?? 0} leitura(s) aceitas · ${result.rejected ?? 0} rejeitada(s)`,
       });
     } catch {
-      toast.error("Gateway indisponÃ­vel", { description: "A leitura em cache permanece disponÃ­vel neste dispositivo." });
+      toast.error("Gateway indisponível", { description: "A leitura em cache permanece disponível neste dispositivo." });
     } finally {
       setSyncing(false);
     }
@@ -64,12 +64,12 @@ function Ops() {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId: "ESP32-DESOL-01" }),
       });
       const result = (await response.json()) as { sanitaryStatus?: string; recommendedLedColor?: string; reading?: { tdsValue: number } };
-      if (!response.ok || !result.reading) throw new Error("SimulaÃ§Ã£o indisponÃ­vel");
+      if (!response.ok || !result.reading) throw new Error("Simulação indisponível");
       window.localStorage.setItem("desol.telemetry.latest.v1", JSON.stringify(result.reading));
       window.dispatchEvent(new CustomEvent("desol:telemetry-alert", { detail: result.reading }));
-      toast.error("Falha simulada", { description: `${result.sanitaryStatus} Â· comando de LED ${result.recommendedLedColor}` });
+      toast.error("Falha simulada", { description: `${result.sanitaryStatus} · comando de LED ${result.recommendedLedColor}` });
     } catch {
-      toast.error("Gateway indisponÃ­vel", { description: "NÃ£o foi possÃ­vel executar a simulaÃ§Ã£o de falha." });
+      toast.error("Gateway indisponível", { description: "Não foi possível executar a simulação de falha." });
     }
   };
 
@@ -81,13 +81,13 @@ function Ops() {
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-semibold text-primary-foreground transition active:scale-[0.98] disabled:opacity-80 md:w-auto"
       >
         <RefreshCw className={`h-5 w-5 ${syncing ? "animate-spin" : ""}`} />
-        {syncing ? "Sincronizandoâ€¦" : "ForÃ§ar SincronizaÃ§Ã£o Local (Bluetooth/LoRa)"}
+        {syncing ? "Sincronizando…" : "Forçar Sincronização Local (Bluetooth/LoRa)"}
       </button>
       <button
         onClick={() => void simulateFailure()}
         className="ml-0 mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-critical/30 px-5 py-3 font-medium text-critical transition hover:bg-critical/5 md:ml-3 md:mt-0 md:inline-flex md:w-auto"
       >
-        <Flame className="h-4 w-4" /> Simular falha sanitÃ¡ria
+        <Flame className="h-4 w-4" /> Simular falha sanitária
       </button>
 
       <div className="mt-8 inline-flex rounded-xl bg-card p-1">
@@ -126,4 +126,3 @@ function Ops() {
     </AppShell>
   );
 }
-

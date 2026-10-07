@@ -96,4 +96,3 @@ export function getDeviceStatus(deviceId: string) {
     recommendedLedColor: latest ? classifyReading(latest).recommendedLedColor : null,
   };
 }
-

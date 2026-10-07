@@ -6,20 +6,20 @@ import { AppShell, Card, Pill, SectionLabel } from "@/components/AppShell";
 export const Route = createFileRoute("/preditivo")({
   head: () => ({
     meta: [
-      { title: "MÃ³dulo preditivo PIML â€” DeSol" },
-      { name: "description", content: "Estimativa demonstrativa de produÃ§Ã£o de Ã¡gua baseada em modelo fÃ­sico de Dunkle." },
-      { property: "og:title", content: "MÃ³dulo preditivo PIML â€” DeSol" },
-      { property: "og:description", content: "Estimativa demonstrativa de produÃ§Ã£o baseada em modelo fÃ­sico de Dunkle." },
+      { title: "Módulo preditivo PIML — DeSol" },
+      { name: "description", content: "Estimativa demonstrativa de produção de água baseada em modelo físico de Dunkle." },
+      { property: "og:title", content: "Módulo preditivo PIML — DeSol" },
+      { property: "og:description", content: "Estimativa demonstrativa de produção baseada em modelo físico de Dunkle." },
     ],
   }),
   component: Predictive,
 });
 
 const components = [
-  { name: "EficiÃªncia do condensador", value: 98 },
-  { name: "VedaÃ§Ã£o da cobertura de vidro", value: 94 },
-  { name: "Bomba de recirculaÃ§Ã£o", value: 89 },
-  { name: "Sensor TDS (calibraÃ§Ã£o)", value: 76 },
+  { name: "Eficiência do condensador", value: 98 },
+  { name: "Vedação da cobertura de vidro", value: 94 },
+  { name: "Bomba de recirculação", value: 89 },
+  { name: "Sensor TDS (calibração)", value: 76 },
 ];
 
 function Gauge({ value, max }: { value: number; max: number }) {
@@ -76,22 +76,22 @@ function Predictive() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Sparkles className="h-4 w-4 text-primary" /> Estado do modelo
         </div>
-        <div className="mt-2 text-4xl font-bold tracking-tight">Estimativa fÃ­sica</div>
+        <div className="mt-2 text-4xl font-bold tracking-tight">Estimativa física</div>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          Modelo demonstrativo baseado na relaÃ§Ã£o de Dunkle. Ainda sem calibraÃ§Ã£o com dados de campo.
+          Modelo demonstrativo baseado na relação de Dunkle. Ainda sem calibração com dados de campo.
         </p>
       </div>
 
       <div className="mt-6 grid gap-3 lg:grid-cols-2">
         <Card className="flex flex-col items-center text-center">
-          <div className="self-start text-sm text-muted-foreground">PrevisÃ£o de ProduÃ§Ã£o de AmanhÃ£</div>
+          <div className="self-start text-sm text-muted-foreground">Previsão de Produção de Amanhã</div>
           <div className="my-4"><Gauge value={prediction?.predictedYieldLiters ?? 0} max={30} /></div>
           {!prediction && <p className="text-xs text-muted-foreground">Aguardando uma leitura do gateway</p>}
           <Pill tone="good">+17% sobre hoje</Pill>
           <div className="mt-5 grid w-full grid-cols-3 gap-2 text-left">
             {[
-              { icon: Sun, label: "RadiaÃ§Ã£o", v: "6,2 kWh/mÂ²" },
-              { icon: ThermometerSun, label: "MÃ¡x. ambiente", v: "34 Â°C" },
+              { icon: Sun, label: "Radiação", v: "6,2 kWh/m²" },
+              { icon: ThermometerSun, label: "Máx. ambiente", v: "34 °C" },
               { icon: Wind, label: "Vento", v: "11 km/h" },
             ].map(({ icon: I, label, v }) => (
               <div key={label} className="rounded-2xl bg-elevated p-3">
@@ -101,11 +101,11 @@ function Predictive() {
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Baseado no modelo fÃ­sico de Dunkle e radiaÃ§Ã£o solar local.</p>
+          <p className="mt-4 text-xs text-muted-foreground">Baseado no modelo físico de Dunkle e radiação solar local.</p>
         </Card>
 
         <div>
-          <SectionLabel>ManutenÃ§Ã£o preditiva</SectionLabel>
+          <SectionLabel>Manutenção preditiva</SectionLabel>
           <div className="overflow-hidden rounded-3xl bg-card">
             {components.map((c, i) => (
               <div key={c.name} className={`px-5 py-4 ${i ? "border-t" : ""}`}>
@@ -121,11 +121,10 @@ function Predictive() {
           </div>
           <div className="mt-3 flex items-start gap-3 rounded-3xl bg-good/10 p-4 text-sm">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-good" />
-            <span>Nenhuma manutenÃ§Ã£o necessÃ¡ria nos prÃ³ximos 15 dias. Recalibrar sensor TDS em 22 dias.</span>
+            <span>Nenhuma manutenção necessária nos próximos 15 dias. Recalibrar sensor TDS em 22 dias.</span>
           </div>
         </div>
       </div>
     </AppShell>
   );
 }
-

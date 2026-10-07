@@ -29,7 +29,7 @@ async function getServerEntry(): Promise<ServerEntry> {
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} â€” try/catch alone never fires for those.
+// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
@@ -163,4 +163,3 @@ async function handleTelemetryApi(request: Request): Promise<Response | null> {
     return jsonResponse({ error: "Internal telemetry API error" }, 500);
   }
 }
-

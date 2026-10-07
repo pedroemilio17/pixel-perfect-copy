@@ -52,4 +52,3 @@ export function predictDailyYield(reading: TelemetryReading): YieldPrediction {
     calibrated: false,
   };
 }
-

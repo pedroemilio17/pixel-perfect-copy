@@ -3,9 +3,9 @@ info:
   title: DeSol Telemetry Gateway API
   version: 1.0.0
   description: >-
-    Gateway HTTP para telemetria DeSol. O armazenamento do servidor Ã© em memÃ³ria;
-    o cliente mantÃ©m cache local para leitura offline. A previsÃ£o Ã© demonstrativa
-    e requer calibraÃ§Ã£o de campo antes de uso operacional.
+    Gateway HTTP para telemetria DeSol. O armazenamento do servidor é em memória;
+    o cliente mantém cache local para leitura offline. A previsão é demonstrativa
+    e requer calibração de campo antes de uso operacional.
 servers:
   - url: /api/v1
 tags:
@@ -188,7 +188,7 @@ components:
         tdsValue: { type: number, minimum: 0, maximum: 100000, description: ppm }
         reservoirLevel: { type: number, minimum: 0, maximum: 100, description: Percent full }
         accumulatedYield: { type: number, minimum: 0, maximum: 1000000, description: Liters accumulated }
-        solarIrradiation: { type: number, minimum: 0, maximum: 2000, description: W/mÂ² }
+        solarIrradiation: { type: number, minimum: 0, maximum: 2000, description: W/m² }
         rssiLoRa: { type: number, minimum: -200, maximum: 0, description: dBm }
         batteryLevel: { type: number, minimum: 0, maximum: 100, description: Battery voltage or percent as provided by device }
     IngestResult:
@@ -218,4 +218,3 @@ components:
             properties:
               error: { type: string }
               deviceId: { type: string }
-
