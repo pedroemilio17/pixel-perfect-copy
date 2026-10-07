@@ -1,24 +1,92 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Droplets, Thermometer, Container, TrendingUp } from "lucide-react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
+import { AppShell, Card, Pill, SectionLabel } from "@/components/AppShell";
+import { history24h, useTelemetry } from "@/lib/telemetry";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Painel em tempo real — DeSol" },
+      { name: "description", content: "Salinidade, temperatura, reservatório e produção de água do dessalinizador solar DeSol em tempo real." },
+      { property: "og:title", content: "Painel em tempo real — DeSol" },
+      { property: "og:description", content: "Telemetria hídrica inteligente ao vivo via LoRa e ESP32." },
+    ],
+  }),
+  component: Dashboard,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Dashboard() {
+  const t = useTelemetry();
+  const liters = ((t.level / 100) * 50).toFixed(1);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <AppShell title="Painel" subtitle="Leituras ao vivo do módulo DeSol #01">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <Head icon={<Droplets className="h-4 w-4" />} color="text-water" label="Salinidade / TDS" />
+          <Value v={t.tds} unit="ppm" />
+          <Pill tone="good">Água Potável · Excelente</Pill>
+        </Card>
+        <Card>
+          <Head icon={<Thermometer className="h-4 w-4" />} color="text-warn" label="Temperatura" />
+          <Value v={t.temp.toFixed(1)} unit="°C" />
+          <Pill tone="warn">Faixa ideal 50–60 °C</Pill>
+        </Card>
+        <Card>
+          <Head icon={<Container className="h-4 w-4" />} color="text-water" label="Reservatório" />
+          <Value v={Math.round(t.level)} unit="%" />
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-water transition-all duration-700" style={{ width: `${t.level}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground tabular">{liters} L / 50 L</p>
+        </Card>
+        <Card>
+          <Head icon={<TrendingUp className="h-4 w-4" />} color="text-primary" label="Produção" />
+          <Value v={t.production.toFixed(1)} unit="L/dia" />
+          <Pill tone="good">+12% vs. ontem</Pill>
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <SectionLabel>Últimas 24 horas</SectionLabel>
+        <Card className="pt-6">
+          <div className="h-72">
+            <ResponsiveContainer>
+              <LineChart data={history24h} margin={{ left: -16, right: -8 }}>
+                <CartesianGrid stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="hora" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} interval={3} />
+                <YAxis yAxisId="t" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="p" orientation="right" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ background: "var(--color-elevated)", border: "none", borderRadius: 14, fontSize: 12 }}
+                  labelStyle={{ color: "var(--color-muted-foreground)" }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Line yAxisId="t" type="monotone" dataKey="temperatura" name="Temperatura (°C)" stroke="var(--color-warn)" strokeWidth={2.5} dot={false} />
+                <Line yAxisId="p" type="monotone" dataKey="producao" name="Produção (L)" stroke="var(--color-water)" strokeWidth={2.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+    </AppShell>
+  );
+}
+
+function Head({ icon, label, color }: { icon: React.ReactNode; label: string; color: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <span className={color}>{icon}</span>
+      {label}
+    </div>
+  );
+}
+
+function Value({ v, unit }: { v: string | number; unit: string }) {
+  return (
+    <div className="my-3 flex items-baseline gap-1">
+      <span className="text-4xl font-semibold tracking-tight tabular">{v}</span>
+      <span className="text-sm text-muted-foreground">{unit}</span>
     </div>
   );
 }
