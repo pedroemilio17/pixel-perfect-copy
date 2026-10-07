@@ -1,6 +1,8 @@
 # DeSol — Telemetria Hídrica Inteligente
 
-Aplicativo responsivo em modo escuro (slate-950/900) com destaques em ciano #06b6d4, esmeralda #10b981 e âmbar #f59e0b. Fonte Geist. Estilo shadcn/ui com microinterações suaves. Todo o conteúdo em português e com dados simulados que mudam ao vivo.
+Aplicativo responsivo em modo escuro, com visual o mais simples possível inspirado no iOS: fundo quase preto, cartões arredondados (cantos grandes) em cinza escuro, sem bordas pesadas, muito espaço, títulos grandes em negrito, listas agrupadas estilo Ajustes do iPhone, controles segmentados e barra de abas inferior no celular.
+
+Identidade segue a logo enviada: o amarelo #FFF53D da logo é a cor principal (botões, item ativo, destaques); a logo aparece no topo da navegação. Ciano #06b6d4 para água, esmeralda #10b981 para status bom, âmbar #f59e0b para alertas, vermelho iOS para crítico — usados com moderação. Fonte com cara de SF Pro (Inter com espaçamento ajustado). Todo o conteúdo em português e com dados simulados que mudam ao vivo.
 
 ## Navegação
 - Barra lateral recolhível no desktop (mostra só os ícones quando recolhida) e menu na parte de baixo no celular.
