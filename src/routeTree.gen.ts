@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MapaRouteImport } from './routes/mapa'
+import { Route as OperacionalRouteImport } from './routes/operacional'
+import { Route as PreditivoRouteImport } from './routes/preditivo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapaRoute = MapaRouteImport.update({
+  id: '/mapa',
+  path: '/mapa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperacionalRoute = OperacionalRouteImport.update({
+  id: '/operacional',
+  path: '/operacional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreditivoRoute = PreditivoRouteImport.update({
+  id: '/preditivo',
+  path: '/preditivo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/mapa': typeof MapaRoute
+  '/operacional': typeof OperacionalRoute
+  '/preditivo': typeof PreditivoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/mapa': typeof MapaRoute
+  '/operacional': typeof OperacionalRoute
+  '/preditivo': typeof PreditivoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/mapa': typeof MapaRoute
+  '/operacional': typeof OperacionalRoute
+  '/preditivo': typeof PreditivoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/mapa' | '/operacional' | '/preditivo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/mapa' | '/operacional' | '/preditivo'
+  id: '__root__' | '/' | '/mapa' | '/operacional' | '/preditivo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MapaRoute: typeof MapaRoute
+  OperacionalRoute: typeof OperacionalRoute
+  PreditivoRoute: typeof PreditivoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +78,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mapa': {
+      id: '/mapa'
+      path: '/mapa'
+      fullPath: '/mapa'
+      preLoaderRoute: typeof MapaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operacional': {
+      id: '/operacional'
+      path: '/operacional'
+      fullPath: '/operacional'
+      preLoaderRoute: typeof OperacionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preditivo': {
+      id: '/preditivo'
+      path: '/preditivo'
+      fullPath: '/preditivo'
+      preLoaderRoute: typeof PreditivoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MapaRoute: MapaRoute,
+  OperacionalRoute: OperacionalRoute,
+  PreditivoRoute: PreditivoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
