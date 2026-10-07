@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: DeSol Telemetry Gateway API
+  version: 1.0.0
+  description: >-
+    Gateway HTTP para telemetria DeSol. O armazenamento do servidor Ã© em memÃ³ria;
+    o cliente mantÃ©m cache local para leitura offline. A previsÃ£o Ã© demonstrativa
+    e requer calibraÃ§Ã£o de campo antes de uso operacional.
+servers:
+  - url: /api/v1
+tags:
+  - name: Telemetry
+  - name: Devices
+  - name: Predictions
+paths:
+  /telemetry/ingest:
+    post:
+      tags: [Telemetry]
+      summary: Ingest one ESP32 reading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TelemetryReading' }
+            example:
+              deviceId: ESP32-DESOL-01
+              timestamp: 1791370800
+              waterTemp: 54.2
+              glassTemp: 32.8
+              tdsValue: 88
+              reservoirLevel: 82
+              accumulatedYield: 18.4
+              solarIrradiation: 850.5
+              rssiLoRa: -92
+              batteryLevel: 4.15
+      responses:
+        '201':
+          description: Reading accepted and sanitary status calculated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /telemetry/batch-sync:
+    post:
+      tags: [Telemetry]
+      summary: Sync buffered offline readings
+      description: Readings are validated individually, ordered by timestamp and deduplicated by device and timestamp.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, readings]
+              properties:
+                deviceId: { type: string }
+                readings:
+                  type: array
+                  maxItems: 10000
+                  items: { $ref: '#/components/schemas/TelemetryReading' }
+      responses:
+        '200':
+          description: Batch processed; rejected entries are counted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  accepted: { type: integer }
+                  rejected: { type: integer }
+                  latest: { allOf: [{ $ref: '#/components/schemas/TelemetryReading' }], nullable: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /telemetry/latest/{deviceId}:
+    get:
+      tags: [Telemetry]
+      summary: Get latest device reading
+      parameters: [{ $ref: '#/components/parameters/DeviceId' }]
+      responses:
+        '200':
+          description: Most recent reading
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelemetryReading' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /telemetry/history/{deviceId}:
+    get:
+      tags: [Telemetry]
+      summary: Get readings retained in the last 24 hours
+      parameters: [{ $ref: '#/components/parameters/DeviceId' }]
+      responses:
+        '200':
+          description: Chronologically ordered readings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deviceId: { type: string }
+                  readings:
+                    type: array
+                    items: { $ref: '#/components/schemas/TelemetryReading' }
+  /devices/{deviceId}/status:
+    get:
+      tags: [Devices]
+      summary: Get device connectivity and recommended LED status
+      parameters: [{ $ref: '#/components/parameters/DeviceId' }]
+      responses:
+        '200':
+          description: Device is online when its latest reading is no older than five minutes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deviceId: { type: string }
+                  status: { type: string, enum: [online, offline] }
+                  lastSeen: { type: number, nullable: true, description: Unix timestamp in seconds }
+                  ageSeconds: { type: integer, nullable: true }
+                  recommendedLedColor: { type: string, enum: [RED, YELLOW, GREEN], nullable: true }
+  /predictions/daily-yield/{deviceId}:
+    get:
+      tags: [Predictions]
+      summary: Estimate daily yield from the latest telemetry
+      description: >-
+        Uses a simplified Dunkle estimate and a bounded illustrative residual.
+        Collector area and solar hours are assumptions. accuracyPercent is the
+        96.9 reference value requested by the project brief, not an independently
+        measured accuracy; calibrated is false until field validation exists.
+      parameters: [{ $ref: '#/components/parameters/DeviceId' }]
+      responses:
+        '200':
+          description: Demonstration prediction; not a validated production forecast
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deviceId: { type: string }
+                  predictedYieldLiters: { type: number }
+                  accuracyPercent: { type: number, example: 96.9 }
+                  condenserEfficiency: { type: number, example: 98 }
+                  maintenanceRequiredDays: { type: integer, example: 15 }
+                  model: { type: string }
+                  calibrated: { type: boolean, example: false }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /telemetry/simulate-failure:
+    post:
+      tags: [Telemetry]
+      summary: Create a demonstration critical TDS reading
+      description: Demo-only route that records a 350 ppm reading and recommends RED. It does not send a physical command to an ESP32.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId: { type: string, default: ESP32-DESOL-01 }
+      responses:
+        '201':
+          description: Simulated failure recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/IngestResult' }
+                  - type: object
+                    properties:
+                      reading: { $ref: '#/components/schemas/TelemetryReading' }
+components:
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    TelemetryReading:
+      type: object
+      additionalProperties: false
+      required: [deviceId, timestamp, waterTemp, glassTemp, tdsValue, reservoirLevel, accumulatedYield, solarIrradiation, rssiLoRa, batteryLevel]
+      properties:
+        deviceId: { type: string, minLength: 1, maxLength: 100 }
+        timestamp: { type: number, minimum: 0, description: Unix timestamp in seconds }
+        waterTemp: { type: number, minimum: -20, maximum: 150, description: Degrees Celsius }
+        glassTemp: { type: number, minimum: -20, maximum: 120, description: Degrees Celsius }
+        tdsValue: { type: number, minimum: 0, maximum: 100000, description: ppm }
+        reservoirLevel: { type: number, minimum: 0, maximum: 100, description: Percent full }
+        accumulatedYield: { type: number, minimum: 0, maximum: 1000000, description: Liters accumulated }
+        solarIrradiation: { type: number, minimum: 0, maximum: 2000, description: W/mÂ² }
+        rssiLoRa: { type: number, minimum: -200, maximum: 0, description: dBm }
+        batteryLevel: { type: number, minimum: 0, maximum: 100, description: Battery voltage or percent as provided by device }
+    IngestResult:
+      type: object
+      required: [success, sanitaryStatus, recommendedLedColor, alertTriggered]
+      properties:
+        success: { type: boolean, example: true }
+        sanitaryStatus: { type: string, enum: [CRITICO_CONTAMINACAO, ATENCAO_SALINIDADE, POTAVEL_EXCELENTE] }
+        recommendedLedColor: { type: string, enum: [RED, YELLOW, GREEN] }
+        alertTriggered: { type: boolean }
+  responses:
+    BadRequest:
+      description: Invalid or incomplete JSON payload
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              issues: { type: array, items: { type: object } }
+    NotFound:
+      description: No telemetry available for device
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              deviceId: { type: string }
+
