@@ -236,16 +236,36 @@ test("tela cheia apresenta componentes por 12 s e clique foca a peça com teleme
   ).toBe(true);
   await expect(panel.getByText("Apresentação 360°", { exact: true })).toBeVisible();
   await expect(panel.getByRole("heading")).toHaveText("Irradiância solar");
+  const expectComponentCentered = async (presentation = true) => {
+    const viewport = (await page.locator(".dt-canvas canvas").boundingBox())!;
+    await expect
+      .poll(async () => {
+        const dot = page.locator(".dt-callout-connector circle");
+        return Math.hypot(
+          Number(await dot.getAttribute("cx")) - viewport.width / 2,
+          Number(await dot.getAttribute("cy")) - viewport.height / 2,
+        );
+      })
+      .toBeLessThan(3);
+    await expect(
+      page.getByRole("button", { name: "Rotação automática", exact: true }),
+    ).toHaveAttribute("aria-pressed", String(presentation));
+    if (presentation) await expect(panel).not.toHaveClass(/dt-callout-focused/);
+    else await expect(panel).toHaveClass(/dt-callout-focused/);
+  };
+  await expectComponentCentered();
   await expect(panel.locator("select option")).toHaveCount(12);
   await expect(panel.getByText("DEMO · Dados simulados", { exact: true })).toBeVisible();
   await expect(page.locator(".dt-callout-connector polyline")).toHaveAttribute("points", /\d/);
   await expect(panel.getByRole("heading")).toHaveText("Nível de água", { timeout: 20_000 });
+  await expectComponentCentered();
+  await expect(panel.getByText("Apresentação 360°", { exact: true })).toBeVisible();
   await expect(panel.getByText("Última amostra", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Restaurar câmera", exact: true }).click();
   const canvas = page.locator(".dt-canvas canvas");
   const box = (await canvas.boundingBox())!;
   const sensor = (await projectedSensors(box.width, box.height))[0]!;
-  const before = await canvas.screenshot({
+  const before = await page.screenshot({
     style:
       ".dt-component-callout, .dt-callout-connector, .dt-viewer-top, .dt-viewer-bottom { visibility: hidden !important; }",
   });
@@ -256,15 +276,12 @@ test("tela cheia apresenta componentes por 12 s e clique foca a peça com teleme
   await expect(
     page.getByRole("button", { name: "Rotação automática", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
-  await expect
-    .poll(async () => {
-      const current = await canvas.screenshot({
-        style:
-          ".dt-component-callout, .dt-callout-connector, .dt-viewer-top, .dt-viewer-bottom { visibility: hidden !important; }",
-      });
-      return before.equals(current);
-    })
-    .toBe(false);
+  await expectComponentCentered(false);
+  const after = await page.screenshot({
+    style:
+      ".dt-component-callout, .dt-callout-connector, .dt-viewer-top, .dt-viewer-bottom { visibility: hidden !important; }",
+  });
+  expect(before.equals(after)).toBe(false);
   await page.screenshot({ path: "test-results/digital-twin-fullscreen-focus.png" });
   await panel.getByRole("button", { name: "Retomar apresentação 360°" }).click();
   await expect(panel.getByText("Apresentação 360°", { exact: true })).toBeVisible();

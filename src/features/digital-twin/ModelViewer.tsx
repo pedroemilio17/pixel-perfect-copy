@@ -30,7 +30,7 @@ type Controls = {
   highlight: (id: ComponentId | null) => void;
   zoom: (factor: number) => void;
   move: (azimuth: number, polar: number) => void;
-  focus: (id: ComponentId) => void;
+  focus: (id: ComponentId, presentation?: boolean) => void;
   chooseSide: (id: ComponentId) => void;
 };
 type Props = {
@@ -75,6 +75,9 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
     actions.current?.highlight(selected);
     actions.current?.chooseSide(selected);
   }, [selected, fullscreen]);
+  useEffect(() => {
+    if (touring) actions.current?.focus(selected, true);
+  }, [selected, touring]);
   useEffect(() => {
     const changed = () => {
       const entered = document.fullscreenElement === viewer.current;
@@ -176,6 +179,7 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
             toPosition: InstanceType<typeof THREE.Vector3>;
             fromTarget: InstanceType<typeof THREE.Vector3>;
             toTarget: InstanceType<typeof THREE.Vector3>;
+            resumeRotation: boolean;
           }
         | undefined;
       const stopMotion = () => {
@@ -392,11 +396,13 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
         anchor.current?.setAttribute("cx", String(x));
         anchor.current?.setAttribute("cy", String(y));
       };
-      const focusComponent = (id: ComponentId) => {
+      const focusComponent = (id: ComponentId, presentation = false) => {
         const box = componentBounds.get(id);
         if (!box) return;
         chooseSide(id);
-        stopMotion();
+        transition = undefined;
+        orbit.autoRotate = false;
+        if (!presentation) setRotating(false);
         orbit.enableDamping = false;
         orbit.update();
         orbit.enableDamping = true;
@@ -423,9 +429,10 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
             toPosition: destination,
             fromTarget: orbit.target.clone(),
             toTarget: target,
+            resumeRotation: presentation,
           };
         }
-        setFocused(true);
+        setFocused(!presentation);
         highlight(id);
         needsRender = true;
       };
@@ -498,7 +505,10 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
             camera.position.lerpVectors(transition.fromPosition, transition.toPosition, eased);
             orbit.target.lerpVectors(transition.fromTarget, transition.toTarget, eased);
             needsRender = true;
-            if (progress === 1) transition = undefined;
+            if (progress === 1) {
+              orbit.autoRotate = transition.resumeRotation && !reducedMotion.matches;
+              transition = undefined;
+            }
           }
           const changed = orbit.update();
           if (needsRender || changed) {
