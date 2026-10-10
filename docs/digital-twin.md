@@ -6,6 +6,9 @@
 - Modelo recebido: GLB 2.0, 1.749.364 bytes, 224 nodes exportados e 225 objetos na cena carregada, incluindo a raiz. Seis objetos SENSOR correspondem aos quatro papéis funcionais; todos foram encontrados.
 - SHA-256: `61dd4c141a9e2c87a5d385b8e807c261612b453b22013c5f2f5e72775a37e596`.
 - OrbitControls: arraste, rotação 360°, zoom limitado, rotação automática opcional, reset e tela cheia. A câmera também responde às setas, +/- e Home quando focada, além dos botões de giro lateral. Redução de movimento desativa a rotação automática.
+- Tela cheia inicia a apresentação 360° (quando a redução de movimento não está ativa): percorre os 12 componentes presentes no GLB, com 12 segundos por componente, contador e balão ligado à posição 3D por uma linha projetada. A leitura pausa com a aba oculta.
+- Clique em uma peça na tela cheia pausa a apresentação e aproxima a câmera com uma transição de 650 ms. O painel ampliado ocupa o canto superior oposto à posição inicial da peça. Há seleção por menu/teclado, próximo componente, retorno à visão geral e retomada da apresentação. Esc ou o botão de tela cheia encerra o modo e restaura a câmera.
+- Balões exibem os mesmos registros validados da página: origem DEMO/API, valor, unidade, qualidade, horário e bateria/RSSI/diagnóstico quando disponíveis. Peças sem sensor dedicado mostram a descrição e as leituras gerais, sem inventar medições. Em telas estreitas, o balão tem altura limitada e rolagem para preservar a área do modelo.
 - Raycasting dos sensores, reconhecimento de filhos/ancestrais, prioridade de sensores e seleção de oito grupos de componentes. Destaque reversível por cópia de materiais; vidro, água, calha e transparências não são substituídos.
 - Inspeção efetiva com `scene.traverse`; nomes esperados ausentes são reportados no console e no painel, sem criar um vínculo fictício.
 - Layout responsivo, seleção textual por teclado, indicação de qualidade, horário da leitura, bateria/RSSI/diagnóstico quando recebidos, fallback com imagens técnicas para 404/GLB inválido/WebGL indisponível e botão de nova tentativa.
@@ -21,6 +24,7 @@
 
 - `model.ts`: manifesto, mapeamento, contrato Zod, fixtures, saúde, filtros, lacunas e CSV.
 - `ModelViewer.tsx` / `model-loader.ts`: GLTFLoader, OrbitControls, iluminação, raycasting, gerenciamento e descarte de recursos, renderização somente quando a cena/câmera muda, timeout e recuperação.
+- `presentation.ts` / `ComponentCallout.tsx`: ciclo de 12 segundos, pausa/limpeza de temporizadores e apresentação dos detalhes/telemetria dentro do elemento em tela cheia.
 - `telemetry-client.ts` / `use-telemetry.ts`: adaptador REST, validação e cancelamento, polling a cada 15 s e backoff de 30/60 s após falhas. Essa frequência é da interface, não uma taxa presumida de amostragem do hardware.
 - `src/lib/digital-twin-proxy.server.ts`: proxy somente no backend. O frontend consulta `/api/digital-twin/*`; o token nunca é devolvido na configuração nem colocado em variáveis `VITE_*`. Redirecionamentos são recusados para não encaminhar a autorização a outro destino.
 
@@ -126,7 +130,9 @@ Não há porcentagem de saúde, limiar físico/sanitário presumido ou taxa de a
 ### Resultado da validação desta entrega
 
 - Instalação com `bun install --frozen-lockfile`: aprovada.
-- Build de produção, checagem de tipos e 28 testes Vitest: aprovados.
+- Build de produção, checagem de tipos e 32 testes Vitest: aprovados na atualização de tela cheia de 10/10/2026. Os quatro novos testes cobrem o ciclo completo dos 12 componentes, duração, pausa/retomada/desmontagem, aba oculta, componentes ausentes e identificação de dados simulados.
 - Na validação inicial, os sete testes Playwright passaram. Após reposicionar o modelo no topo da página inicial, em 10/10/2026, o teste de celular/teclado passou, mas o teste completo de rotação/reset/filtros/CSV excedeu o tempo limite em capturas e interações com WebGL de software, inclusive na repetição isolada. A suíte completa ainda precisa ser revalidada nessa versão; esse resultado não é considerado aprovado. O carregamento do GLB e a presença do visualizador na primeira tela foram verificados no navegador em desktop e celular.
 - ESLint: nenhum erro; seis avisos preexistentes de Fast Refresh nos componentes de UI.
 - Modelo e transparências revisados em capturas desktop/mobile. Nenhum ensaio com hardware físico, broker ou gateway real foi executado.
+
+- Atualização de tela cheia (10/10/2026): os dois novos testes Playwright passaram, verificando fullscreen nativo, balão e linha, troca após 12 segundos, clique na malha do GLB, aproximação real da câmera, painel maior, pausa/retomada, saída, seleção textual e redução de movimento. O teste de saída por Esc revelou uma falha no Chromium headless; o visualizador passou a tratar Esc explicitamente, e a repetição desse teste passou. O timeout anteriormente documentado da suíte geral não foi revalidado nesta atualização.

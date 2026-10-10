@@ -219,3 +219,80 @@ test("cenários DEMO mostram falhas e alertas explicitamente simulados", async (
   await expect(page.locator(".dt-invalid-reading")).toHaveCount(0);
   await expect(page.locator(".dt-metric-card").first()).toContainText("725,4");
 });
+
+test("tela cheia apresenta componentes por 12 s e clique foca a peça com telemetria", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await expect(page.getByText("Modelo interativo", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Alternar tela cheia" }).click();
+  const panel = page.getByLabel("Detalhes do componente em tela cheia");
+  await expect(panel).toBeVisible();
+  expect(
+    await page.evaluate(() => document.fullscreenElement?.classList.contains("dt-viewer")),
+  ).toBe(true);
+  await expect(panel.getByText("Apresentação 360°", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("heading")).toHaveText("Irradiância solar");
+  await expect(panel.locator("select option")).toHaveCount(12);
+  await expect(panel.getByText("DEMO · Dados simulados", { exact: true })).toBeVisible();
+  await expect(page.locator(".dt-callout-connector polyline")).toHaveAttribute("points", /\d/);
+  await expect(panel.getByRole("heading")).toHaveText("Nível de água", { timeout: 20_000 });
+  await expect(panel.getByText("Última amostra", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Restaurar câmera", exact: true }).click();
+  const canvas = page.locator(".dt-canvas canvas");
+  const box = (await canvas.boundingBox())!;
+  const sensor = (await projectedSensors(box.width, box.height))[0]!;
+  const before = await canvas.screenshot({
+    style:
+      ".dt-component-callout, .dt-callout-connector, .dt-viewer-top, .dt-viewer-bottom { visibility: hidden !important; }",
+  });
+  await page.mouse.click(box.x + sensor.x, box.y + sensor.y);
+  await expect(panel).toHaveClass(/dt-callout-focused/);
+  await expect(panel.getByRole("heading")).toHaveText("Irradiância solar");
+  await expect(panel.getByText("Componente em foco", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Rotação automática", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect
+    .poll(async () => {
+      const current = await canvas.screenshot({
+        style:
+          ".dt-component-callout, .dt-callout-connector, .dt-viewer-top, .dt-viewer-bottom { visibility: hidden !important; }",
+      });
+      return before.equals(current);
+    })
+    .toBe(false);
+  await page.screenshot({ path: "test-results/digital-twin-fullscreen-focus.png" });
+  await panel.getByRole("button", { name: "Retomar apresentação 360°" }).click();
+  await expect(panel.getByText("Apresentação 360°", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Alternar tela cheia" }).click();
+  await expect(panel).toHaveCount(0);
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  await expect(
+    page.getByRole("button", { name: "Rotação automática", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  expect(errors).toEqual([]);
+});
+
+test("tela cheia respeita redução de movimento e seleção por teclado", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.getByText("Modelo interativo", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Alternar tela cheia" }).click();
+  const panel = page.getByLabel("Detalhes do componente em tela cheia");
+  await expect(panel).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Rotação automática", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await panel.getByLabel("Selecionar componente em tela cheia").selectOption("solar_panel");
+  await expect(panel.getByRole("heading")).toHaveText("Painel fotovoltaico");
+  await expect(panel).toHaveClass(/dt-callout-focused/);
+  await expect(
+    panel.getByText("Este componente não possui medição dedicada configurada."),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+});

@@ -27,7 +27,7 @@ export function useDigitalTelemetry(from: string, to: string) {
   const [error, setError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const mode =
+  const mode: "demo" | "real" | "checking" =
     forceDemo || config?.mode === "demo" ? "demo" : config?.mode === "real" ? "real" : "checking";
   const retry = useCallback(() => {
     setForceDemo(false);

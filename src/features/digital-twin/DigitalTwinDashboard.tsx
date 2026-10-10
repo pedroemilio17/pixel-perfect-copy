@@ -301,7 +301,20 @@ export default function DigitalTwinDashboard() {
             <Suspense
               fallback={<div className="dt-viewer dt-empty">Preparando visualizador 3D…</div>}
             >
-              <ModelViewer selected={selected} onSelect={setSelected} onInspect={setScene} />
+              <ModelViewer
+                selected={selected}
+                onSelect={setSelected}
+                onInspect={setScene}
+                telemetry={{
+                  readings: latest,
+                  health: Object.fromEntries(sensorIds.map((id) => [id, health(id)])) as Record<
+                    SensorId,
+                    Health
+                  >,
+                  mode: telemetry.mode,
+                  error: telemetry.error,
+                }}
+              />
             </Suspense>
             <div className="dt-model-meta">
               <span>

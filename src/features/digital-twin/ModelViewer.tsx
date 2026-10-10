@@ -20,6 +20,8 @@ import {
   type ComponentId,
 } from "./model";
 import { loadModelBytes } from "./model-loader";
+import ComponentCallout, { type ViewerTelemetry } from "./ComponentCallout";
+import { nextPresentedComponent, presentationOrder, useComponentTour } from "./presentation";
 
 export type SceneReport = ReturnType<typeof inspectSceneNames>;
 type Controls = {
@@ -28,17 +30,30 @@ type Controls = {
   highlight: (id: ComponentId | null) => void;
   zoom: (factor: number) => void;
   move: (azimuth: number, polar: number) => void;
+  focus: (id: ComponentId) => void;
+  chooseSide: (id: ComponentId) => void;
 };
 type Props = {
   selected: ComponentId;
   onSelect: (id: ComponentId) => void;
   onInspect: (report: SceneReport | null) => void;
+  telemetry: ViewerTelemetry;
 };
-export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
+export default function ModelViewer({ selected, onSelect, onInspect, telemetry }: Props) {
+  const viewer = useRef<HTMLElement>(null);
+  const callout = useRef<HTMLDivElement>(null);
+  const connector = useRef<SVGSVGElement>(null);
+  const leader = useRef<SVGPolylineElement>(null);
+  const anchor = useRef<SVGCircleElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [side, setSide] = useState<"left" | "right">("right");
+  const [available, setAvailable] = useState<ComponentId[]>([]);
+  const [fullscreenError, setFullscreenError] = useState("");
   const host = useRef<HTMLDivElement>(null);
   const actions = useRef<Controls | undefined>(undefined);
-  const callbacks = useRef({ selected, onSelect, onInspect });
-  callbacks.current = { selected, onSelect, onInspect };
+  const callbacks = useRef({ selected, onSelect, onInspect, fullscreen });
+  callbacks.current = { selected, onSelect, onInspect, fullscreen };
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("");
   const [retry, setRetry] = useState(0);
@@ -46,9 +61,42 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
   const [hovered, setHovered] = useState<ComponentId | null>(null);
   const [reference, setReference] = useState<"exterior" | "basin">("exterior");
 
+  const touring = fullscreen && rotating && status === "ready";
+  const remaining = useComponentTour({ enabled: touring, selected, available, onSelect });
+  const nextComponent = () => {
+    const next = nextPresentedComponent(selected, available);
+    if (next) onSelect(next);
+  };
+  const examine = (id: ComponentId) => {
+    onSelect(id);
+    actions.current?.focus(id);
+  };
   useEffect(() => {
     actions.current?.highlight(selected);
-  }, [selected]);
+    actions.current?.chooseSide(selected);
+  }, [selected, fullscreen]);
+  useEffect(() => {
+    const changed = () => {
+      const entered = document.fullscreenElement === viewer.current;
+      setFullscreen(entered);
+      setFocused(false);
+      if (entered) actions.current?.rotate(true);
+      else actions.current?.reset();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && document.fullscreenElement === viewer.current) {
+        void document
+          .exitFullscreen()
+          .catch(() => setFullscreenError("Use o botão de tela cheia para sair da apresentação."));
+      }
+    };
+    document.addEventListener("fullscreenchange", changed);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("fullscreenchange", changed);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
   useEffect(() => {
     const container = host.current;
     if (!container) return;
@@ -58,6 +106,8 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
     setStatus("loading");
     setRotating(false);
     setHovered(null);
+    setFocused(false);
+    setAvailable([]);
     callbacks.current.onInspect(null);
     const initialize = async () => {
       const [THREE, { GLTFLoader }, { OrbitControls }, { RoomEnvironment }, bytes] =
@@ -119,6 +169,21 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
       reducedMotion.addEventListener("change", motionChanged);
       let model: InstanceType<typeof THREE.Group> | undefined = undefined;
       let frame = 0;
+      let transition:
+        | {
+            start: number;
+            fromPosition: InstanceType<typeof THREE.Vector3>;
+            toPosition: InstanceType<typeof THREE.Vector3>;
+            fromTarget: InstanceType<typeof THREE.Vector3>;
+            toTarget: InstanceType<typeof THREE.Vector3>;
+          }
+        | undefined;
+      const stopMotion = () => {
+        transition = undefined;
+        orbit.autoRotate = false;
+        setRotating(false);
+      };
+      orbit.addEventListener("start", stopMotion);
       let needsRender = true;
       const requestRender = () => {
         needsRender = true;
@@ -198,7 +263,10 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
       const pointerUp = (event: PointerEvent) => {
         if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) return;
         const hit = findHit(event);
-        if (hit) callbacks.current.onSelect(hit);
+        if (hit) {
+          callbacks.current.onSelect(hit);
+          if (callbacks.current.fullscreen) focusComponent(hit);
+        }
       };
       const pointerLeave = () => {
         setHovered(null);
@@ -247,6 +315,7 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
         renderer.domElement.removeEventListener("webglcontextlost", contextLost);
         restoreMaterials();
         orbit.removeEventListener("change", requestRender);
+        orbit.removeEventListener("start", stopMotion);
         orbit.dispose();
         if (model) disposeModel(model);
         environment.dispose();
@@ -279,7 +348,91 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
       const radius = Math.max(bounds.getBoundingSphere(new THREE.Sphere()).radius, 0.1);
       orbit.minDistance = radius * 0.6;
       orbit.maxDistance = radius * 7;
+      const componentBounds = new Map<ComponentId, InstanceType<typeof THREE.Box3>>();
+      model.updateMatrixWorld(true);
+      model.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const id = componentFromObject(object);
+        if (!id) return;
+        const box = componentBounds.get(id) ?? new THREE.Box3();
+        box.union(new THREE.Box3().setFromObject(object));
+        componentBounds.set(id, box);
+      });
+      setAvailable(presentationOrder.filter((id) => componentBounds.has(id)));
+      const projected = new THREE.Vector3();
+      const chooseSide = (id: ComponentId) => {
+        const box = componentBounds.get(id);
+        if (!box) return;
+        box.getCenter(projected).project(camera);
+        setSide(projected.x > 0 ? "left" : "right");
+        needsRender = true;
+      };
+      const updateConnector = () => {
+        if (!callbacks.current.fullscreen || !callout.current || !connector.current) return;
+        const box = componentBounds.get(callbacks.current.selected);
+        if (!box) return;
+        camera.updateMatrixWorld();
+        box.getCenter(projected).project(camera);
+        const visible =
+          projected.z >= -1 &&
+          projected.z <= 1 &&
+          Math.abs(projected.x) <= 1 &&
+          Math.abs(projected.y) <= 1;
+        connector.current.style.visibility = visible ? "visible" : "hidden";
+        if (!visible) return;
+        const rect = container.getBoundingClientRect();
+        const panel = callout.current.getBoundingClientRect();
+        const x = ((projected.x + 1) * rect.width) / 2;
+        const y = ((1 - projected.y) * rect.height) / 2;
+        const panelOnLeft = panel.left + panel.width / 2 < rect.left + rect.width / 2;
+        const endX = (panelOnLeft ? panel.right : panel.left) - rect.left;
+        const endY = panel.top - rect.top + Math.min(100, panel.height / 2);
+        const elbowX = endX + (panelOnLeft ? 24 : -24);
+        leader.current?.setAttribute("points", `${x},${y} ${elbowX},${endY} ${endX},${endY}`);
+        anchor.current?.setAttribute("cx", String(x));
+        anchor.current?.setAttribute("cy", String(y));
+      };
+      const focusComponent = (id: ComponentId) => {
+        const box = componentBounds.get(id);
+        if (!box) return;
+        chooseSide(id);
+        stopMotion();
+        orbit.enableDamping = false;
+        orbit.update();
+        orbit.enableDamping = true;
+        const target = box.getCenter(new THREE.Vector3());
+        const componentRadius = box.getBoundingSphere(new THREE.Sphere()).radius;
+        const distance = THREE.MathUtils.clamp(
+          (componentRadius / Math.sin(THREE.MathUtils.degToRad(20))) *
+            1.5 *
+            (camera.aspect < 1 ? 1 / camera.aspect : 1),
+          radius * 0.12,
+          radius * 6,
+        );
+        orbit.minDistance = radius * 0.04;
+        const direction = camera.position.clone().sub(orbit.target).normalize();
+        const destination = target.clone().addScaledVector(direction, distance);
+        if (reducedMotion.matches) {
+          camera.position.copy(destination);
+          orbit.target.copy(target);
+          orbit.update();
+        } else {
+          transition = {
+            start: performance.now(),
+            fromPosition: camera.position.clone(),
+            toPosition: destination,
+            fromTarget: orbit.target.clone(),
+            toTarget: target,
+          };
+        }
+        setFocused(true);
+        highlight(id);
+        needsRender = true;
+      };
       const reset = () => {
+        transition = undefined;
+        setFocused(false);
+        orbit.minDistance = radius * 0.6;
         orbit.autoRotate = false;
         setRotating(false);
         orbit.enableDamping = false;
@@ -301,7 +454,10 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
       actions.current = {
         reset,
         highlight,
+        focus: focusComponent,
+        chooseSide,
         move: (azimuth, polar) => {
+          transition = undefined;
           orbit.autoRotate = false;
           setRotating(false);
           orbit.enableDamping = false;
@@ -316,10 +472,13 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
           orbit.enableDamping = true;
         },
         rotate: (enabled) => {
+          transition = undefined;
+          if (enabled) reset();
           orbit.autoRotate = enabled && !reducedMotion.matches;
           setRotating(orbit.autoRotate);
         },
         zoom: (factor) => {
+          transition = undefined;
           const offset = camera.position.clone().sub(orbit.target);
           offset.setLength(
             THREE.MathUtils.clamp(offset.length() * factor, orbit.minDistance, orbit.maxDistance),
@@ -333,9 +492,18 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
         if (disposed) return;
         frame = requestAnimationFrame(animate);
         if (!document.hidden) {
+          if (transition) {
+            const progress = Math.min((performance.now() - transition.start) / 650, 1);
+            const eased = progress * progress * (3 - 2 * progress);
+            camera.position.lerpVectors(transition.fromPosition, transition.toPosition, eased);
+            orbit.target.lerpVectors(transition.fromTarget, transition.toTarget, eased);
+            needsRender = true;
+            if (progress === 1) transition = undefined;
+          }
           const changed = orbit.update();
           if (needsRender || changed) {
             renderer.render(scene, camera);
+            updateConnector();
             needsRender = false;
           }
         }
@@ -357,7 +525,11 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
   }, [retry]);
 
   return (
-    <section className="dt-viewer" aria-label="Visualização do dessalinizador">
+    <section
+      ref={viewer}
+      className={`dt-viewer ${fullscreen ? "dt-viewer-fullscreen" : ""}`}
+      aria-label="Visualização do dessalinizador"
+    >
       <div className="dt-viewer-top">
         <span>
           <Box size={15} /> Dessalinizador solar <b>r33</b>
@@ -418,7 +590,52 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
           </div>
         </div>
       )}
-      {hovered && status === "ready" && (
+      {fullscreenError && (
+        <div className="dt-fullscreen-error" role="alert">
+          {fullscreenError}
+        </div>
+      )}
+      {fullscreen && status === "ready" && (
+        <>
+          <svg ref={connector} className="dt-callout-connector" aria-hidden="true">
+            <polyline ref={leader} fill="none" />
+            <circle ref={anchor} r="5" />
+          </svg>
+          <div
+            ref={callout}
+            className={`dt-component-callout dt-callout-${side} ${focused ? "dt-callout-focused" : ""}`}
+            aria-label="Detalhes do componente em tela cheia"
+          >
+            <ComponentCallout
+              selected={selected}
+              telemetry={telemetry}
+              touring={touring}
+              remaining={remaining}
+              position={available.indexOf(selected) + 1}
+              count={available.length}
+              onPause={() => actions.current?.focus(selected)}
+              onResume={() => actions.current?.rotate(true)}
+              onNext={nextComponent}
+              onReset={() => actions.current?.reset()}
+            />
+            <label className="dt-callout-select">
+              Selecionar componente
+              <select
+                aria-label="Selecionar componente em tela cheia"
+                value={selected}
+                onChange={(event) => examine(event.target.value as ComponentId)}
+              >
+                {available.map((id) => (
+                  <option key={id} value={id}>
+                    {isSensor(id) ? sensors[id].label : parts[id].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </>
+      )}
+      {hovered && status === "ready" && !fullscreen && (
         <div className="dt-hover-label">
           {isSensor(hovered) ? sensors[hovered].label : parts[hovered].label}
         </div>
@@ -478,10 +695,21 @@ export default function ModelViewer({ selected, onSelect, onInspect }: Props) {
             <RotateCcw size={17} />
           </button>
           <button
-            onClick={() => {
-              if (host.current?.parentElement && !document.fullscreenElement)
-                void host.current.parentElement.requestFullscreen?.().catch(() => {});
-              else void document.exitFullscreen?.().catch(() => {});
+            onClick={async () => {
+              setFullscreenError("");
+              try {
+                if (document.fullscreenElement === viewer.current) await document.exitFullscreen();
+                else if (viewer.current?.requestFullscreen)
+                  await viewer.current.requestFullscreen();
+                else
+                  setFullscreenError(
+                    "Este navegador não oferece tela cheia. Use os controles de câmera e o painel de sensores.",
+                  );
+              } catch {
+                setFullscreenError(
+                  "Não foi possível entrar em tela cheia. Verifique a permissão de tela cheia do navegador.",
+                );
+              }
             }}
             aria-label="Alternar tela cheia"
             title="Tela cheia"
