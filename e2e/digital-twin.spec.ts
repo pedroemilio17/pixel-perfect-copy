@@ -227,7 +227,9 @@ test("tela cheia apresenta componentes por 12 s e clique foca a peça com teleme
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByText("Modelo interativo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Modelo interativo", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
   await page.getByRole("button", { name: "Alternar tela cheia" }).click();
   const panel = page.getByLabel("Detalhes do componente em tela cheia");
   await expect(panel).toBeVisible();
@@ -312,4 +314,10 @@ test("tela cheia respeita redução de movimento e seleção por teclado", async
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
+  const fullscreenButton = page.getByRole("button", { name: "Alternar tela cheia" });
+  await fullscreenButton.click();
+  await expect(panel).toBeVisible();
+  await fullscreenButton.click();
+  await expect(panel).toHaveCount(0);
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
 });

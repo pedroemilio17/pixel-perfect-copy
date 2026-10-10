@@ -20,6 +20,7 @@ import {
   type ComponentId,
 } from "./model";
 import { loadModelBytes } from "./model-loader";
+import { bestComponentFrame } from "./component-framing";
 import ComponentCallout, { type ViewerTelemetry } from "./ComponentCallout";
 import { nextPresentedComponent, presentationOrder, useComponentTour } from "./presentation";
 
@@ -399,7 +400,6 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
       const focusComponent = (id: ComponentId, presentation = false) => {
         const box = componentBounds.get(id);
         if (!box) return;
-        chooseSide(id);
         transition = undefined;
         orbit.autoRotate = false;
         if (!presentation) setRotating(false);
@@ -407,17 +407,30 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
         orbit.update();
         orbit.enableDamping = true;
         const target = box.getCenter(new THREE.Vector3());
-        const componentRadius = box.getBoundingSphere(new THREE.Sphere()).radius;
-        const distance = THREE.MathUtils.clamp(
-          (componentRadius / Math.sin(THREE.MathUtils.degToRad(20))) *
-            1.5 *
-            (camera.aspect < 1 ? 1 / camera.aspect : 1),
-          radius * 0.12,
-          radius * 6,
+        const canvasRect = container.getBoundingClientRect();
+        const calloutRect = callout.current?.getBoundingClientRect();
+        const frame = bestComponentFrame(
+          box,
+          camera.aspect,
+          { width: canvasRect.width, height: canvasRect.height },
+          calloutRect
+            ? {
+                left: calloutRect.left - canvasRect.left,
+                top: calloutRect.top - canvasRect.top,
+                right: calloutRect.right - canvasRect.left,
+                bottom: calloutRect.bottom - canvasRect.top,
+              }
+            : {
+                left: canvasRect.width,
+                top: 0,
+                right: canvasRect.width,
+                bottom: canvasRect.height * 0.4,
+              },
         );
+        setSide(frame.side);
         orbit.minDistance = radius * 0.04;
-        const direction = camera.position.clone().sub(orbit.target).normalize();
-        const destination = target.clone().addScaledVector(direction, distance);
+        orbit.maxDistance = Math.max(radius * 7, frame.distance * 1.05);
+        const destination = target.clone().addScaledVector(frame.direction, frame.distance);
         if (reducedMotion.matches) {
           camera.position.copy(destination);
           orbit.target.copy(target);
@@ -440,6 +453,7 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
         transition = undefined;
         setFocused(false);
         orbit.minDistance = radius * 0.6;
+        orbit.maxDistance = radius * 7;
         orbit.autoRotate = false;
         setRotating(false);
         orbit.enableDamping = false;
@@ -708,8 +722,13 @@ export default function ModelViewer({ selected, onSelect, onInspect, telemetry }
             onClick={async () => {
               setFullscreenError("");
               try {
-                if (document.fullscreenElement === viewer.current) await document.exitFullscreen();
-                else if (viewer.current?.requestFullscreen)
+                if (document.fullscreenElement === viewer.current) {
+                  await document.exitFullscreen();
+                  if (!document.fullscreenElement) {
+                    setFullscreen(false);
+                    actions.current?.reset();
+                  }
+                } else if (viewer.current?.requestFullscreen)
                   await viewer.current.requestFullscreen();
                 else
                   setFullscreenError(
