@@ -81,14 +81,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0f1014" },
       { title: "DeSol — Telemetria Hídrica Inteligente" },
-      { name: "description", content: "Monitoramento de dessalinização solar com LoRa, ESP32 e IA preditiva." },
+      {
+        name: "description",
+        content: "Monitoramento de dessalinização solar com LoRa, ESP32 e IA preditiva.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
@@ -119,7 +125,18 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <Toaster theme="dark" position="top-center" toastOptions={{ style: { borderRadius: 16, background: "var(--color-elevated)", border: "none", color: "var(--color-foreground)" } }} />
+      <Toaster
+        theme="dark"
+        position="top-center"
+        toastOptions={{
+          style: {
+            borderRadius: 16,
+            background: "var(--color-elevated)",
+            border: "none",
+            color: "var(--color-foreground)",
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }

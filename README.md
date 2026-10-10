@@ -22,3 +22,32 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Gêmeo digital do dessalinizador solar (r33)
+
+A página inicial incorpora o GLB fornecido da revisão 33, com navegação 360°, seleção das peças e dos quatro papéis de sensores, histórico, eventos e relatórios CSV. O estilo DeSol, as outras rotas e o painel anterior foram preservados.
+
+Sem configuração de API, a página inicia em **DEMO: dados simulados — sem telemetria real**. O menu de cenários permite demonstrar gateway offline e leitura inválida. Nada disso confirma hardware instalado ou potabilidade.
+
+Requisitos: Node.js 22.12+ (ou 24) e Bun 1.3.14+. No Fedora, caso o instalador pelo GitHub falhe, instale o Bun pelo npm: `npm install -g bun`.
+
+```sh
+bun install --frozen-lockfile
+bun run dev -- --port 3000
+```
+
+Abra `http://localhost:3000` no mesmo computador que executa o servidor e mantenha o terminal aberto. O lockfile usa o registro público com as versões e hashes de integridade preservados; não depende do cache privado da Lovable.
+
+Verificação:
+
+```sh
+bun run build
+bun run test
+bunx tsc --noEmit
+bunx playwright install chromium
+bun run test:e2e
+```
+
+Para usar o Chromium já instalado no Fedora: `CHROMIUM_PATH=/usr/bin/chromium bun run test:e2e` (ajuste o caminho ao executável disponível).
+
+Para telemetria real, copie `.env.example` para `.env.local`, configure o backend e reinicie o servidor. Tokens ficam somente no backend. Consulte [a documentação completa de integração](docs/digital-twin.md) para contratos, variáveis, saúde, testes e pendências de hardware.

@@ -1,0 +1,103 @@
+{
+  "title": "Gêmeo Digital — Dessalinizador Solar",
+  "higgsfieldProjectId": "7adb1f2b-287e-4aa3-9f5c-fed8124f4c5a",
+  "higgsfieldUrl": "https://higgsfield.ai/3d-jutsu/7adb1f2b-287e-4aa3-9f5c-fed8124f4c5a",
+  "revision": 33,
+  "format": "glb",
+  "glbBundled": false,
+  "recommendedLocalAssetPath": "/models/dessalinizador-solar-r33.glb",
+  "objectsInScene": 225,
+  "modelUnits": "meters (conceptual)",
+  "body": {
+    "width_m": 1.66,
+    "shortDimension_m": 1.24,
+    "roofTilt_deg": 18,
+    "basinTouchingShell": true,
+    "internalWaterDepth_mm": 40,
+    "gutter": {
+      "side": "+X, short wall",
+      "width_m": 0.186,
+      "length_m": 1.236,
+      "widthShareOfShortDimension": 0.15,
+      "drainObject": "BASIN_gutter_freshwater_drain_to_existing_outlet"
+    }
+  },
+  "sensorRoles": [
+    {
+      "id": "solar_irradiance",
+      "displayName": "Irradiação solar",
+      "metric": "irradiance_w_m2",
+      "unit": "W/m²",
+      "sceneObjectNames": ["SENSOR_solar_irradiance_pyranometer", "SENSOR_solar_irradiance_dome"],
+      "sceneGroupPrefixes": ["SENSOR_solar_irradiance_"],
+      "hardwareConfirmed": false
+    },
+    {
+      "id": "water_level",
+      "displayName": "Nível de água",
+      "metric": "water_level_mm",
+      "unit": "mm",
+      "sceneObjectNames": ["SENSOR_water_level_external_housing", "SENSOR_water_level_indicator"],
+      "sceneGroupPrefixes": ["SENSOR_water_level_"],
+      "hardwareConfirmed": false
+    },
+    {
+      "id": "production_flow",
+      "displayName": "Vazão de água produzida",
+      "metric": "production_flow_l_h",
+      "unit": "L/h",
+      "sceneObjectNames": ["SENSOR_product_water_flow_detector"],
+      "sceneGroupPrefixes": ["SENSOR_product_water_flow_"],
+      "hardwareConfirmed": false
+    },
+    {
+      "id": "gateway",
+      "displayName": "Controlador ESP32 / LoRa",
+      "metric": "gateway_online",
+      "unit": "boolean",
+      "sceneObjectNames": ["SENSOR_case_telemetry_online_indicator"],
+      "sceneGroupPrefixes": ["SENSOR_case_telemetry_"],
+      "hardwareConfirmed": false
+    }
+  ],
+  "otherInteractiveParts": [
+    {
+      "group": "roof",
+      "prefixes": ["ROOF_"]
+    },
+    {
+      "group": "basin_and_gutter",
+      "prefixes": ["BASIN_", "WATER_"]
+    },
+    {
+      "group": "solar_panel",
+      "prefixes": ["PV_"]
+    },
+    {
+      "group": "external_tank",
+      "prefixes": ["TANK_"]
+    },
+    {
+      "group": "cooling",
+      "prefixes": ["PIPE_"]
+    },
+    {
+      "group": "electronics",
+      "prefixes": ["ELEC_", "COMMS_"]
+    },
+    {
+      "group": "collection_and_filter",
+      "prefixes": ["OUTLET_", "FILTER_"]
+    },
+    {
+      "group": "body",
+      "prefixes": ["BODY_"]
+    }
+  ],
+  "notes": [
+    "As dimensões são do modelo conceitual, não cotas de fabricação.",
+    "Os 6 meshes de sensores representam quatro papéis, não seis sensores físicos confirmados.",
+    "Não há telemetria real no GLB.",
+    "Nomes devem ser validados após a importação GLB."
+  ]
+}

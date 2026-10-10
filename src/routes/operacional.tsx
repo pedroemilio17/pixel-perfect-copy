@@ -9,7 +9,10 @@ export const Route = createFileRoute("/operacional")({
   head: () => ({
     meta: [
       { title: "Controle operacional e alertas — DeSol" },
-      { name: "description", content: "Feed de alertas por severidade e sincronização local via Bluetooth ou LoRa." },
+      {
+        name: "description",
+        content: "Feed de alertas por severidade e sincronização local via Bluetooth ou LoRa.",
+      },
       { property: "og:title", content: "Controle operacional e alertas — DeSol" },
       { property: "og:description", content: "Alertas e controle da rede DeSol." },
     ],
@@ -46,13 +49,19 @@ function Ops() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ deviceId: "ESP32-DESOL-01", readings }),
       });
-      const result = (await response.json()) as { accepted?: number; rejected?: number; error?: string };
+      const result = (await response.json()) as {
+        accepted?: number;
+        rejected?: number;
+        error?: string;
+      };
       if (!response.ok) throw new Error(result.error ?? "Falha na sincronização");
       toast.success("Sincronização com o gateway concluída", {
         description: `${result.accepted ?? 0} leitura(s) aceitas · ${result.rejected ?? 0} rejeitada(s)`,
       });
     } catch {
-      toast.error("Gateway indisponível", { description: "A leitura em cache permanece disponível neste dispositivo." });
+      toast.error("Gateway indisponível", {
+        description: "A leitura em cache permanece disponível neste dispositivo.",
+      });
     } finally {
       setSyncing(false);
     }
@@ -61,15 +70,25 @@ function Ops() {
   const simulateFailure = async () => {
     try {
       const response = await fetch("/api/v1/telemetry/simulate-failure", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ deviceId: "ESP32-DESOL-01" }),
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceId: "ESP32-DESOL-01" }),
       });
-      const result = (await response.json()) as { sanitaryStatus?: string; recommendedLedColor?: string; reading?: { tdsValue: number } };
+      const result = (await response.json()) as {
+        sanitaryStatus?: string;
+        recommendedLedColor?: string;
+        reading?: { tdsValue: number };
+      };
       if (!response.ok || !result.reading) throw new Error("Simulação indisponível");
       window.localStorage.setItem("desol.telemetry.latest.v1", JSON.stringify(result.reading));
       window.dispatchEvent(new CustomEvent("desol:telemetry-alert", { detail: result.reading }));
-      toast.error("Falha simulada", { description: `${result.sanitaryStatus} · comando de LED ${result.recommendedLedColor}` });
+      toast.error("Falha simulada", {
+        description: `${result.sanitaryStatus} · comando de LED ${result.recommendedLedColor}`,
+      });
     } catch {
-      toast.error("Gateway indisponível", { description: "Não foi possível executar a simulação de falha." });
+      toast.error("Gateway indisponível", {
+        description: "Não foi possível executar a simulação de falha.",
+      });
     }
   };
 
@@ -108,8 +127,13 @@ function Ops() {
           {list.map((a, i) => {
             const S = sev[a.severity];
             return (
-              <div key={a.id} className={`flex items-center gap-4 px-5 py-3.5 animate-in fade-in slide-in-from-top-1 ${i ? "border-t" : ""}`}>
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${S.cls}`}>
+              <div
+                key={a.id}
+                className={`flex items-center gap-4 px-5 py-3.5 animate-in fade-in slide-in-from-top-1 ${i ? "border-t" : ""}`}
+              >
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${S.cls}`}
+                >
                   <S.icon className="h-[18px] w-[18px]" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -120,7 +144,9 @@ function Ops() {
               </div>
             );
           })}
-          {!list.length && <div className="px-5 py-8 text-center text-sm text-muted-foreground">Nenhum evento</div>}
+          {!list.length && (
+            <div className="px-5 py-8 text-center text-sm text-muted-foreground">Nenhum evento</div>
+          )}
         </div>
       </div>
     </AppShell>

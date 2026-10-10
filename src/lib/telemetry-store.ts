@@ -26,12 +26,27 @@ export type IngestResult = {
 
 export function classifyReading(reading: TelemetryReading): IngestResult {
   if (reading.tdsValue > 100 || reading.waterTemp > 70) {
-    return { success: true, sanitaryStatus: "CRITICO_CONTAMINACAO", recommendedLedColor: "RED", alertTriggered: true };
+    return {
+      success: true,
+      sanitaryStatus: "CRITICO_CONTAMINACAO",
+      recommendedLedColor: "RED",
+      alertTriggered: true,
+    };
   }
   if (reading.reservoirLevel > 95) {
-    return { success: true, sanitaryStatus: "ATENCAO_SALINIDADE", recommendedLedColor: "YELLOW", alertTriggered: false };
+    return {
+      success: true,
+      sanitaryStatus: "ATENCAO_SALINIDADE",
+      recommendedLedColor: "YELLOW",
+      alertTriggered: false,
+    };
   }
-  return { success: true, sanitaryStatus: "POTAVEL_EXCELENTE", recommendedLedColor: "GREEN", alertTriggered: false };
+  return {
+    success: true,
+    sanitaryStatus: "POTAVEL_EXCELENTE",
+    recommendedLedColor: "GREEN",
+    alertTriggered: false,
+  };
 }
 
 const HISTORY_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -53,7 +68,10 @@ export function addReading(reading: TelemetryReading): void {
   readingsByDevice.set(reading.deviceId, prune(readings, Date.now() / 1000));
 }
 
-export function addReadingsBatch(deviceId: string, candidates: unknown[]): { accepted: number; rejected: number } {
+export function addReadingsBatch(
+  deviceId: string,
+  candidates: unknown[],
+): { accepted: number; rejected: number } {
   let accepted = 0;
   let rejected = 0;
   const parsed: TelemetryReading[] = [];

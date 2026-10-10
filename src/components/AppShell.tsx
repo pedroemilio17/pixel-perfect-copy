@@ -27,7 +27,17 @@ function StatusBar() {
   );
 }
 
-export function AppShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function AppShell({
+  title,
+  subtitle,
+  children,
+  statusBar,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  statusBar?: ReactNode;
+}) {
   return (
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r px-4 py-6 md:flex">
@@ -45,7 +55,9 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
               to={to}
               activeOptions={{ exact: true }}
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              activeProps={{ className: "bg-card !text-foreground font-medium [&>svg]:text-primary" }}
+              activeProps={{
+                className: "bg-card !text-foreground font-medium [&>svg]:text-primary",
+              }}
             >
               <Icon className="h-[18px] w-[18px]" />
               {label}
@@ -60,7 +72,7 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
             <img src={logo} alt="DeSol" className="h-7 w-7" />
             <span className="text-sm font-semibold">DeSol</span>
           </div>
-          <StatusBar />
+          {statusBar ?? <StatusBar />}
           <h1 className="mt-4 text-[34px] font-bold leading-tight tracking-tight">{title}</h1>
           {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
           <div className="mt-8">{children}</div>
@@ -89,7 +101,13 @@ export function Card({ className = "", children }: { className?: string; childre
   return <div className={`rounded-3xl bg-card p-5 ${className}`}>{children}</div>;
 }
 
-export function Pill({ tone, children }: { tone: "good" | "warn" | "critical" | "water" | "primary"; children: ReactNode }) {
+export function Pill({
+  tone,
+  children,
+}: {
+  tone: "good" | "warn" | "critical" | "water" | "primary";
+  children: ReactNode;
+}) {
   const map = {
     good: "bg-good/15 text-good",
     warn: "bg-warn/15 text-warn",
@@ -97,9 +115,19 @@ export function Pill({ tone, children }: { tone: "good" | "warn" | "critical" | 
     water: "bg-water/15 text-water",
     primary: "bg-primary/15 text-primary",
   };
-  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[tone]}`}>{children}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[tone]}`}
+    >
+      {children}
+    </span>
+  );
 }
 
 export function SectionLabel({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{children}</h2>;
+  return (
+    <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  );
 }

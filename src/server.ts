@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { predictDailyYield } from "./lib/piml-engine";
+import { handleDigitalTwinApi } from "./lib/digital-twin-proxy.server";
 import {
   addReading,
   addReadingsBatch,
@@ -57,6 +58,8 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const twinResponse = await handleDigitalTwinApi(request, env);
+      if (twinResponse) return twinResponse;
       const apiResponse = await handleTelemetryApi(request);
       if (apiResponse) return apiResponse;
       const handler = await getServerEntry();
@@ -85,33 +88,60 @@ async function handleTelemetryApi(request: Request): Promise<Response | null> {
   try {
     if (path === "/telemetry/ingest" && method === "POST") {
       const parsed = telemetryReadingSchema.safeParse(await request.json());
-      if (!parsed.success) return jsonResponse({ error: "Invalid telemetry payload", issues: parsed.error.issues }, 400);
+      if (!parsed.success)
+        return jsonResponse(
+          { error: "Invalid telemetry payload", issues: parsed.error.issues },
+          400,
+        );
       addReading(parsed.data);
       const result = classifyReading(parsed.data);
       if (result.alertTriggered) {
-        console.error("CRITICAL_TELEMETRY_ALERT", JSON.stringify({ deviceId: parsed.data.deviceId, timestamp: parsed.data.timestamp, tdsValue: parsed.data.tdsValue, waterTemp: parsed.data.waterTemp }));
+        console.error(
+          "CRITICAL_TELEMETRY_ALERT",
+          JSON.stringify({
+            deviceId: parsed.data.deviceId,
+            timestamp: parsed.data.timestamp,
+            tdsValue: parsed.data.tdsValue,
+            waterTemp: parsed.data.waterTemp,
+          }),
+        );
       }
       return jsonResponse(result, 201);
     }
 
     if (path === "/telemetry/batch-sync" && method === "POST") {
       const body: unknown = await request.json();
-      if (typeof body !== "object" || body === null || !("deviceId" in body) || !("readings" in body)) {
+      if (
+        typeof body !== "object" ||
+        body === null ||
+        !("deviceId" in body) ||
+        !("readings" in body)
+      ) {
         return jsonResponse({ error: "Expected deviceId and readings" }, 400);
       }
       const { deviceId, readings } = body;
-      if (typeof deviceId !== "string" || !deviceId.trim() || !Array.isArray(readings) || readings.length > 10_000) {
+      if (
+        typeof deviceId !== "string" ||
+        !deviceId.trim() ||
+        !Array.isArray(readings) ||
+        readings.length > 10_000
+      ) {
         return jsonResponse({ error: "Invalid deviceId or readings (maximum 10000)" }, 400);
       }
       const counts = addReadingsBatch(deviceId, readings);
-      return jsonResponse({ success: true, ...counts, latest: getLatestReading(deviceId) ?? null }, 200);
+      return jsonResponse(
+        { success: true, ...counts, latest: getLatestReading(deviceId) ?? null },
+        200,
+      );
     }
 
     const latestMatch = path.match(/^\/telemetry\/latest\/([^/]+)$/);
     if (latestMatch && method === "GET") {
       const deviceId = decodeURIComponent(latestMatch[1]!);
       const latest = getLatestReading(deviceId);
-      return latest ? jsonResponse(latest) : jsonResponse({ error: "No telemetry found", deviceId }, 404);
+      return latest
+        ? jsonResponse(latest)
+        : jsonResponse({ error: "No telemetry found", deviceId }, 404);
     }
 
     const historyMatch = path.match(/^\/telemetry\/history\/([^/]+)$/);
@@ -136,8 +166,10 @@ async function handleTelemetryApi(request: Request): Promise<Response | null> {
 
     if (path === "/telemetry/simulate-failure" && method === "POST") {
       const body: unknown = await request.json().catch(() => ({}));
-      const requestedId = typeof body === "object" && body !== null && "deviceId" in body ? body.deviceId : undefined;
-      const deviceId = typeof requestedId === "string" && requestedId.trim() ? requestedId : "ESP32-DESOL-01";
+      const requestedId =
+        typeof body === "object" && body !== null && "deviceId" in body ? body.deviceId : undefined;
+      const deviceId =
+        typeof requestedId === "string" && requestedId.trim() ? requestedId : "ESP32-DESOL-01";
       const reading = telemetryReadingSchema.parse({
         deviceId,
         timestamp: Date.now() / 1000,
@@ -152,13 +184,17 @@ async function handleTelemetryApi(request: Request): Promise<Response | null> {
       });
       addReading(reading);
       const result = classifyReading(reading);
-      console.error("CRITICAL_TELEMETRY_SIMULATION", JSON.stringify({ deviceId, timestamp: reading.timestamp, tdsValue: reading.tdsValue }));
+      console.error(
+        "CRITICAL_TELEMETRY_SIMULATION",
+        JSON.stringify({ deviceId, timestamp: reading.timestamp, tdsValue: reading.tdsValue }),
+      );
       return jsonResponse({ ...result, reading }, 201);
     }
 
     return jsonResponse({ error: "API route not found" }, 404);
   } catch (error) {
-    if (error instanceof SyntaxError) return jsonResponse({ error: "Request body must be valid JSON" }, 400);
+    if (error instanceof SyntaxError)
+      return jsonResponse({ error: "Request body must be valid JSON" }, 400);
     console.error("Telemetry API error", error);
     return jsonResponse({ error: "Internal telemetry API error" }, 500);
   }

@@ -25,11 +25,13 @@ export function predictDailyYield(reading: TelemetryReading): YieldPrediction {
     0,
     saturationPressureKpa(reading.waterTemp) - saturationPressureKpa(reading.glassTemp),
   );
-  const convectionTerm = deltaTemperature + (vaporPressureDelta * (reading.waterTemp + 273.15)) / 268_900;
+  const convectionTerm =
+    deltaTemperature + (vaporPressureDelta * (reading.waterTemp + 273.15)) / 268_900;
   const convectiveCoefficient = 0.884 * Math.cbrt(Math.max(convectionTerm, 0));
-  const evaporativeCoefficient = deltaTemperature > 0
-    ? 0.016273 * convectiveCoefficient * (vaporPressureDelta / deltaTemperature)
-    : 0;
+  const evaporativeCoefficient =
+    deltaTemperature > 0
+      ? 0.016273 * convectiveCoefficient * (vaporPressureDelta / deltaTemperature)
+      : 0;
   const evaporativeHeatFlux = evaporativeCoefficient * vaporPressureDelta;
   const dunkleLitersPerHour = (evaporativeHeatFlux * 3_600) / 2_430;
   const irradianceFactor = Math.min(1, Math.max(0, reading.solarIrradiation / 850));

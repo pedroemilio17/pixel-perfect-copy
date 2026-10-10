@@ -1,0 +1,82 @@
+{
+  "deviceId": "solar-distiller-demo-001",
+  "mode": "demo",
+  "isSimulation": true,
+  "generatedFor": "interface demonstration only",
+  "sampleIntervalSeconds": 60,
+  "records": [
+    {
+      "deviceId": "solar-distiller-demo-001",
+      "sensorId": "solar_irradiance",
+      "metric": "irradiance_w_m2",
+      "value": 725.4,
+      "unit": "W/m²",
+      "timestamp": "2026-10-09T13:00:00Z",
+      "quality": "good",
+      "source": "demo"
+    },
+    {
+      "deviceId": "solar-distiller-demo-001",
+      "sensorId": "water_level",
+      "metric": "water_level_mm",
+      "value": 39.9,
+      "unit": "mm",
+      "timestamp": "2026-10-09T13:00:00Z",
+      "quality": "good",
+      "source": "demo"
+    },
+    {
+      "deviceId": "solar-distiller-demo-001",
+      "sensorId": "production_flow",
+      "metric": "production_flow_l_h",
+      "value": 0.42,
+      "unit": "L/h",
+      "timestamp": "2026-10-09T13:00:00Z",
+      "quality": "good",
+      "source": "demo"
+    },
+    {
+      "deviceId": "solar-distiller-demo-001",
+      "sensorId": "gateway",
+      "metric": "gateway_online",
+      "value": true,
+      "unit": "boolean",
+      "timestamp": "2026-10-09T13:00:00Z",
+      "quality": "good",
+      "source": "demo"
+    }
+  ],
+  "history": [
+    {
+      "timestamp": "2026-10-09T12:00:00Z",
+      "irradiance_w_m2": 540,
+      "water_level_mm": 40.1,
+      "production_flow_l_h": 0.24
+    },
+    {
+      "timestamp": "2026-10-09T12:15:00Z",
+      "irradiance_w_m2": 600,
+      "water_level_mm": 40.0,
+      "production_flow_l_h": 0.28
+    },
+    {
+      "timestamp": "2026-10-09T12:30:00Z",
+      "irradiance_w_m2": 670,
+      "water_level_mm": 40.0,
+      "production_flow_l_h": 0.35
+    },
+    {
+      "timestamp": "2026-10-09T12:45:00Z",
+      "irradiance_w_m2": 708,
+      "water_level_mm": 39.9,
+      "production_flow_l_h": 0.39
+    },
+    {
+      "timestamp": "2026-10-09T13:00:00Z",
+      "irradiance_w_m2": 725.4,
+      "water_level_mm": 39.9,
+      "production_flow_l_h": 0.42
+    }
+  ],
+  "health": "demo_only_do_not_infer_real_status"
+}

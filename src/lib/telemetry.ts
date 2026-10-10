@@ -47,7 +47,11 @@ function toTelemetry(reading: TelemetryReading, offline: boolean): Telemetry {
     temp: reading.waterTemp,
     level: reading.reservoirLevel,
     production: reading.accumulatedYield,
-    status: critical ? "CRITICO_CONTAMINACAO" : warning ? "ATENCAO_SALINIDADE" : "POTAVEL_EXCELENTE",
+    status: critical
+      ? "CRITICO_CONTAMINACAO"
+      : warning
+        ? "ATENCAO_SALINIDADE"
+        : "POTAVEL_EXCELENTE",
     led: critical ? "RED" : warning ? "YELLOW" : "GREEN",
     offline,
   };
@@ -59,7 +63,9 @@ export function useTelemetry(): Telemetry {
     let active = true;
     const refresh = async () => {
       try {
-        const response = await fetch(`/api/v1/telemetry/latest/${encodeURIComponent(DEVICE_ID)}`, { cache: "no-store" });
+        const response = await fetch(`/api/v1/telemetry/latest/${encodeURIComponent(DEVICE_ID)}`, {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const reading = (await response.json()) as TelemetryReading;
         if (!active) return;
@@ -81,14 +87,15 @@ export function useTelemetry(): Telemetry {
 
 export type ChartReading = { hora: string; temperatura: number; producao: number };
 
-const makeDemoHistory = (): ChartReading[] => Array.from({ length: 24 }, (_, i) => {
-  const sun = Math.max(0, Math.sin(((i - 6) / 12) * Math.PI));
-  return {
-    hora: `${String(i).padStart(2, "0")}h`,
-    temperatura: +(28 + sun * 28 + Math.sin(i) * 0.8).toFixed(1),
-    producao: +(sun * 1.9 + 0.08 + Math.cos(i * 1.3) * 0.06).toFixed(2),
-  };
-});
+const makeDemoHistory = (): ChartReading[] =>
+  Array.from({ length: 24 }, (_, i) => {
+    const sun = Math.max(0, Math.sin(((i - 6) / 12) * Math.PI));
+    return {
+      hora: `${String(i).padStart(2, "0")}h`,
+      temperatura: +(28 + sun * 28 + Math.sin(i) * 0.8).toFixed(1),
+      producao: +(sun * 1.9 + 0.08 + Math.cos(i * 1.3) * 0.06).toFixed(2),
+    };
+  });
 
 function aggregateHistory(readings: TelemetryReading[]): ChartReading[] {
   const buckets = new Map<number, TelemetryReading[]>();
@@ -125,7 +132,9 @@ export function useTelemetryHistory(): ChartReading[] {
     let active = true;
     const refresh = async () => {
       try {
-        const response = await fetch(`/api/v1/telemetry/history/${encodeURIComponent(DEVICE_ID)}`, { cache: "no-store" });
+        const response = await fetch(`/api/v1/telemetry/history/${encodeURIComponent(DEVICE_ID)}`, {
+          cache: "no-store",
+        });
         if (!response.ok) return;
         const result = (await response.json()) as { readings: TelemetryReading[] };
         const next = result.readings.length ? aggregateHistory(result.readings) : makeDemoHistory();
@@ -152,23 +161,51 @@ export type Alert = { id: number; severity: Severity; title: string; detail: str
 const templates: Omit<Alert, "id" | "time">[] = [
   { severity: "good", title: "Água dentro do limite operacional", detail: "TDS abaixo de 100 ppm" },
   { severity: "warn", title: "Reservatório próximo da capacidade", detail: "Nível acima de 95%" },
-  { severity: "critical", title: "Risco de contaminação", detail: "TDS acima de 100 ppm ou temperatura acima de 70 °C" },
-  { severity: "good", title: "Sincronização LoRa concluída", detail: "Telemetria recebida pelo gateway" },
-  { severity: "warn", title: "Radiação abaixo do esperado", detail: "Produção pode ficar abaixo da estimativa" },
-  { severity: "good", title: "Ciclo de limpeza finalizado", detail: "Verifique o condensador no próximo ciclo" },
+  {
+    severity: "critical",
+    title: "Risco de contaminação",
+    detail: "TDS acima de 100 ppm ou temperatura acima de 70 °C",
+  },
+  {
+    severity: "good",
+    title: "Sincronização LoRa concluída",
+    detail: "Telemetria recebida pelo gateway",
+  },
+  {
+    severity: "warn",
+    title: "Radiação abaixo do esperado",
+    detail: "Produção pode ficar abaixo da estimativa",
+  },
+  {
+    severity: "good",
+    title: "Ciclo de limpeza finalizado",
+    detail: "Verifique o condensador no próximo ciclo",
+  },
 ];
 const now = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-export const initialAlerts: Alert[] = templates.map((template, index) => ({ id: index + 1, ...template, time: now() }));
+export const initialAlerts: Alert[] = templates.map((template, index) => ({
+  id: index + 1,
+  ...template,
+  time: now(),
+}));
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState(initialAlerts);
   useEffect(() => {
     const onFailure = (event: Event) => {
       const customEvent = event as CustomEvent<{ tdsValue: number }>;
-      setAlerts((current) => [{
-        id: Date.now(), severity: "critical", title: "Risco de contaminação detectado",
-        detail: `TDS ${customEvent.detail.tdsValue} ppm · LED RED recomendado`, time: now(),
-      }, ...current].slice(0, 30));
+      setAlerts((current) =>
+        [
+          {
+            id: Date.now(),
+            severity: "critical" as const,
+            title: "Risco de contaminação detectado",
+            detail: `TDS ${customEvent.detail.tdsValue} ppm · LED RED recomendado`,
+            time: now(),
+          },
+          ...current,
+        ].slice(0, 30),
+      );
     };
     window.addEventListener("desol:telemetry-alert", onFailure);
     return () => window.removeEventListener("desol:telemetry-alert", onFailure);
@@ -177,12 +214,66 @@ export function useAlerts() {
 }
 
 export const communities = [
-  { id: "a", name: "Vila Soledade", x: 22, y: 30, dbm: -92, status: "online", sync: "agora", liters: 18.4 },
-  { id: "b", name: "Comunidade Baixio", x: 48, y: 22, dbm: -88, status: "online", sync: "há 5 min", liters: 16.9 },
-  { id: "c", name: "Sítio Pedra Branca", x: 72, y: 38, dbm: -104, status: "offline", sync: "há 3 h", liters: 12.1 },
-  { id: "d", name: "Assentamento Boa Vista", x: 35, y: 64, dbm: -96, status: "online", sync: "há 11 min", liters: 20.2 },
-  { id: "e", name: "Ribeirinha São José", x: 64, y: 72, dbm: -99, status: "sync", sync: "sincronizando", liters: 15.7 },
-  { id: "f", name: "Gateway Central", x: 50, y: 48, dbm: -61, status: "gateway", sync: "agora", liters: 0 },
+  {
+    id: "a",
+    name: "Vila Soledade",
+    x: 22,
+    y: 30,
+    dbm: -92,
+    status: "online",
+    sync: "agora",
+    liters: 18.4,
+  },
+  {
+    id: "b",
+    name: "Comunidade Baixio",
+    x: 48,
+    y: 22,
+    dbm: -88,
+    status: "online",
+    sync: "há 5 min",
+    liters: 16.9,
+  },
+  {
+    id: "c",
+    name: "Sítio Pedra Branca",
+    x: 72,
+    y: 38,
+    dbm: -104,
+    status: "offline",
+    sync: "há 3 h",
+    liters: 12.1,
+  },
+  {
+    id: "d",
+    name: "Assentamento Boa Vista",
+    x: 35,
+    y: 64,
+    dbm: -96,
+    status: "online",
+    sync: "há 11 min",
+    liters: 20.2,
+  },
+  {
+    id: "e",
+    name: "Ribeirinha São José",
+    x: 64,
+    y: 72,
+    dbm: -99,
+    status: "sync",
+    sync: "sincronizando",
+    liters: 15.7,
+  },
+  {
+    id: "f",
+    name: "Gateway Central",
+    x: 50,
+    y: 48,
+    dbm: -61,
+    status: "gateway",
+    sync: "agora",
+    liters: 0,
+  },
 ] as const;
 
 export const syncHistory = [
